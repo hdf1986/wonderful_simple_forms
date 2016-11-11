@@ -13,7 +13,7 @@ module WonderfulSimpleForms
       end
 
       def default_input_type_with_belongs_to(*args, &block)
-        att_name = (args.first || @attribute_name).to_s
+        att_name = (args.first || "#{@attribute_name}").to_s
         options = args.last
         return :belongs_to if (
           object.class.reflect_on_all_associations(:belongs_to).any? { |a| a.name == args.first })
@@ -34,17 +34,25 @@ module WonderfulSimpleForms
       end
 
       def enum_list
-        object.class.method(attribute_name.to_s.pluralize.to_sym).call
+        object.class.method(attribute_name.to_s.pluralize.to_sym).call.keys
       end
     end
 
     class BelongsToInput < ::SimpleForm::Inputs::CollectionSelectInput
+      attr_reader :original_attribute_name
+
+      def initialize(builder, attribute_name, column, input_type, options = {})
+        @original_attribute_name = attribute_name
+        attribute_name = "#{attribute_name}_id".to_sym
+        super
+      end
+
       def collection
         @collection ||= enum_list
       end
 
       def enum_list
-        attribute_name.to_s.classify.constantize.all.map{|instance|[instance.method(:name).call, instance.id]}
+        original_attribute_name.to_s.classify.constantize.all.map{|instance|[instance.method(:name).call, instance.id]}
       end
     end
   end
@@ -57,4 +65,4 @@ SimpleForm::FormBuilder.class_eval do
 
   alias_method_chain :default_input_type, :enum
   alias_method_chain :default_input_type, :belongs_to
-end
+endr
